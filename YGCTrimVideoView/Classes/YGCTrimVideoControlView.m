@@ -174,7 +174,7 @@ static const CGFloat kDefaultControlBarWidth = 10;
         if ([self.delegate respondsToSelector:@selector(rightSideBarChangedFrame:leftBarCurrentFrame:)]) {
             [self.delegate rightSideBarChangedFrame:self.rightControlBar.frame leftBarCurrentFrame:self.leftControlBar.frame];
         }
-    }else if(gesture.state == UIGestureRecognizerStateEnded || gesture.state == UIGestureRecognizerStateCancelled) {
+    } else if(gesture.state == UIGestureRecognizerStateEnded || gesture.state == UIGestureRecognizerStateCancelled) {
         if ([self.delegate respondsToSelector:@selector(panGestureEnded:rightFrame:)]) {
             [self.delegate panGestureEnded:self.leftControlBar.frame rightFrame:self.rightControlBar.frame];
         }
@@ -242,12 +242,15 @@ static const CGFloat kDefaultControlBarWidth = 10;
 #pragma mark - Public Method
 - (void)resetLeftSideBarImage:(UIImage *)leftImage {
     self.leftControlBar.image = leftImage;
+    [self setNeedsLayout];
 }
 - (void)resetRightSideBarImage:(UIImage *)rightImage {
     self.rightControlBar.image = rightImage;
+    [self setNeedsLayout];
 }
 - (void)resetCenterRangeImage:(UIImage *)centerRangeImage {
     self.centerRangeView.image = centerRangeImage;
+    [self setNeedsLayout];
 }
 
 - (CGRect)leftBarFrame {

@@ -77,11 +77,21 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     return self;
 }
 
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    if(!CGRectEqualToRect(self.thumbCollectionView.frame, self.bounds)) {
+        self.thumbCollectionView.frame = self.bounds;
+        self.controlView.frame = CGRectInset(self.bounds, self.controlInset, 0);
+        [self generateVideoThumb];
+    }
+}
+
+
 - (void)commonInit {
     [self addSubview:self.thumbCollectionView];
     [self addSubview:self.controlView];
-
     [self.thumbCollectionView registerClass:[YGCThumbCollectionViewCell class] forCellWithReuseIdentifier:kCellIdentifier];
+    [self setNeedsLayout];
 }
 
 - (NSTimeInterval)pixelSeconds {
@@ -89,7 +99,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 }
 
 - (NSTimeInterval)cellTime {
-    return [self pixelSeconds] * [self cellWidth];;
+    return [self pixelSeconds] * [self cellWidth];
 }
 
 - (CGFloat)cellWidth {
@@ -113,7 +123,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
         _controlView = [[YGCTrimVideoControlView alloc] initWithFrame:CGRectInset(self.bounds, self.controlInset, 0) leftControlImage:self.leftSidebarImage rightControlImage:self.rightSidebarImage centerRangeImage:self.centerRangeImage sideBarWidth:self.sidebarWidth];
         _controlView.delegate = self;
         _controlView.tag = 42;
-        _controlView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+        //_controlView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
     }
     return _controlView;
 }
@@ -125,7 +135,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
         _thumbCollectionView = [[UICollectionView alloc] initWithFrame:self.bounds collectionViewLayout:layout];
         _thumbCollectionView.delegate = self;
         _thumbCollectionView.dataSource = self;
-        _thumbCollectionView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+        //_thumbCollectionView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
         _thumbCollectionView.tag = 77;
     }
     return _thumbCollectionView;
@@ -148,12 +158,25 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 }
 
 - (void)setMinSeconds:(NSTimeInterval)minSeconds {
-    _minSeconds = minSeconds;
-    self.controlView.mininumTimeWidth = _minSeconds / [self pixelSeconds];
+
+    if(minSeconds!= _minSeconds) {
+        _minSeconds = minSeconds;
+        self.controlView.mininumTimeWidth = _minSeconds / [self pixelSeconds];
+        [self setNeedsLayout];
+    }
 }
+
+- (void)setMaxSeconds:(NSTimeInterval)maxSeconds {
+    if(_maxSeconds != maxSeconds) {
+        _maxSeconds = maxSeconds;
+        [self setNeedsLayout];
+    }
+}
+
 
 - (void)setSidebarWidth:(CGFloat)sidebarWidth {
     _sidebarWidth = sidebarWidth;
+    [self setNeedsLayout];
 }
 
 - (void)setLeftSidebarImage:(UIImage *)leftSidebarImage {
@@ -263,23 +286,30 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     CMTimeScale timeScale = self.asset.duration.timescale;
 
     self.controlView.mininumTimeWidth = self.minSeconds/[self pixelSeconds];
-
     NSInteger thumbNumber = CMTimeGetSeconds(self.asset.duration)/[self cellTime];
+
+    [self.timeArray removeAllObjects];
+
     for (int i = 0; i<thumbNumber; i++) {
         CMTime time = CMTimeMakeWithSeconds([self cellTime] * i, timeScale);
         NSValue *value = [NSValue valueWithCMTime:time];
         [self.timeArray addObject:value];
     }
 
-    [self.imageGenerator generateCGImagesAsynchronouslyForTimes:self.timeArray completionHandler:^(CMTime requestedTime, CGImageRef  _Nullable image, CMTime actualTime, AVAssetImageGeneratorResult result, NSError * _Nullable error) {
-        if (error == nil && result == AVAssetImageGeneratorSucceeded) {
-            [self.thumbImageArray addObject:[UIImage imageWithCGImage:image]];
-            dispatch_async(dispatch_get_main_queue(), ^{
-
-                [self.thumbCollectionView reloadData];
-            });
-        }
-    }];
+    if([self.thumbImageArray count] > 0) { //If called to re-layout, just adjust cells widths via time
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.thumbCollectionView reloadData];
+        });
+    } else { // initial load
+        [self.imageGenerator generateCGImagesAsynchronouslyForTimes:self.timeArray completionHandler:^(CMTime requestedTime, CGImageRef  _Nullable image, CMTime actualTime, AVAssetImageGeneratorResult result, NSError * _Nullable error) {
+            if (error == nil && result == AVAssetImageGeneratorSucceeded) {
+                [self.thumbImageArray addObject:[UIImage imageWithCGImage:image]];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self.thumbCollectionView reloadData];
+                });
+            }
+        }];
+    }
 }
 
 - (AVMutableComposition *)trimVideo {
