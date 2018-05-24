@@ -19,6 +19,11 @@ typedef void(^YGCExportFinished)(BOOL success, NSURL *outputURL);
 
 - (void)dragActionEnded:(AVMutableComposition *)asset;
 
+@optional
+
+- (void)videoExportProgressChanged: (float) percent;
+- (void)videoExportStarted; //TODO: Renamed?
+- (void)videoExportFinished: (BOOL) success url: (NSURL *) url;
 @end
 
 @interface YGCTrimVideoView : UIView

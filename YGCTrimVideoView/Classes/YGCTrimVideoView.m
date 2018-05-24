@@ -67,7 +67,6 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
         _rightSidebarImage = rightImage;
         _centerRangeImage = centerImage;
         _sidebarWidth = width;
-        _exportType = AVFileTypeQuickTimeMovie;
         self.thumbImageArray = [NSMutableArray array];
         self.timeArray = [NSMutableArray array];
         _maxSeconds = kDefaultMaxSeconds;
@@ -366,21 +365,48 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     AVAssetExportSession *session = [[AVAssetExportSession alloc] initWithAsset:asset presetName:AVAssetExportPresetHighestQuality];
     session.outputURL = [NSURL fileURLWithPath:tmpFile];
     session.outputFileType =  videoType ;
-    [session exportAsynchronouslyWithCompletionHandler:^{
-        if (session.status == AVAssetExportSessionStatusCompleted) {
-            finishedBlock(YES, session.outputURL);
-        }else {
-            finishedBlock(NO, nil);
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if ([self.delegate respondsToSelector:@selector(videoExportStarted)]) {
+            [self.delegate videoExportStarted];
         }
+    });
+
+    NSTimer *progress = [NSTimer scheduledTimerWithTimeInterval:.5 target:self selector:@selector(updateExportProgress:)
+                                                       userInfo:@{@"session": session} repeats:YES];
+
+    [session exportAsynchronouslyWithCompletionHandler:^{
+
+        [progress invalidate];
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+            BOOL success = NO;
+            if (session.status == AVAssetExportSessionStatusCompleted) {
+                success = YES;
+                finishedBlock(YES, session.outputURL);
+            } else {
+                finishedBlock(NO, nil);
+            }
+            if ([self.delegate respondsToSelector:@selector(videoExportFinished:url:)]) {
+                [self.delegate videoExportFinished:success url:session.outputURL];
+            }
+        });
+
     }];
 
     return session;
 }
 
 
-
 - ( AVAssetExportSession * _Nonnull )exportVideo:(YGCExportFinished)finishedBlock {
     return [self exportVideoType:AVFileTypeQuickTimeMovie name:@"output.mov" completion:finishedBlock];
+}
+
+- (void) updateExportProgress: (NSTimer *)timer {
+    AVAssetExportSession *session  = (AVAssetExportSession*)timer.userInfo[@"session"];
+    if ([self.delegate respondsToSelector:@selector(videoExportProgressChanged)]) {
+        [self.delegate videoExportProgressChanged:session.progress];
+    }
 }
 
 - (NSString *)pathForTemporaryFileWithPrefix:(NSString *)prefix
