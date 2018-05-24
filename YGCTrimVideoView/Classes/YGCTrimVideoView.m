@@ -67,6 +67,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
         _rightSidebarImage = rightImage;
         _centerRangeImage = centerImage;
         _sidebarWidth = width;
+        _exportType = AVFileTypeQuickTimeMovie;
         self.thumbImageArray = [NSMutableArray array];
         self.timeArray = [NSMutableArray array];
         _maxSeconds = kDefaultMaxSeconds;
@@ -354,15 +355,17 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 
 #pragma mark - Export
 
-- (void)exportVideo:(YGCExportFinished)finishedBlock {
+
+
+- ( AVAssetExportSession * _Nonnull )exportVideoType: (AVFileType) videoType name:(NSString *)name  completion: (YGCExportFinished)finishedBlock {
     AVMutableComposition *asset = [self trimVideo];
-    NSString *tmpFile = [NSString stringWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
+    NSString *tmpFile = [NSString stringWithFormat:@"%@_%@", [self pathForTemporaryFileWithPrefix:@"trim"], name];
     if ([[NSFileManager defaultManager] fileExistsAtPath:tmpFile]) {
         [[NSFileManager defaultManager] removeItemAtPath:tmpFile error:nil];
     }
     AVAssetExportSession *session = [[AVAssetExportSession alloc] initWithAsset:asset presetName:AVAssetExportPresetHighestQuality];
     session.outputURL = [NSURL fileURLWithPath:tmpFile];
-    session.outputFileType = AVFileTypeQuickTimeMovie;
+    session.outputFileType =  videoType ;
     [session exportAsynchronouslyWithCompletionHandler:^{
         if (session.status == AVAssetExportSessionStatusCompleted) {
             finishedBlock(YES, session.outputURL);
@@ -370,5 +373,34 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
             finishedBlock(NO, nil);
         }
     }];
+
+    return session;
+}
+
+
+
+- ( AVAssetExportSession * _Nonnull )exportVideo:(YGCExportFinished)finishedBlock {
+    return [self exportVideoType:AVFileTypeQuickTimeMovie name:@"output.mov" completion:finishedBlock];
+}
+
+- (NSString *)pathForTemporaryFileWithPrefix:(NSString *)prefix
+{
+    NSString *  result;
+    CFUUIDRef   uuid;
+    CFStringRef uuidStr;
+
+    uuid = CFUUIDCreate(NULL);
+    assert(uuid != NULL);
+
+    uuidStr = CFUUIDCreateString(NULL, uuid);
+    assert(uuidStr != NULL);
+
+    result = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%@-%@", prefix, uuidStr]];
+    assert(result != nil);
+
+    CFRelease(uuidStr);
+    CFRelease(uuid);
+
+    return result;
 }
 @end

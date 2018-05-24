@@ -57,8 +57,10 @@ typedef void(^YGCExportFinished)(BOOL success, NSURL *outputURL);
  */
 @property (nonatomic, strong) UIColor *maskColor;
 
+
+
 - (id)initWithFrame:(CGRect)frame
-            assetURL:(NSURL *)url;
+            assetURL:(NSURL *)url ;// NS_SWIFT_NAME(exportVideo(completion:));
 
 - (id)initWithFrame:(CGRect)frame
             assetURL:(NSURL *)url
@@ -68,6 +70,8 @@ typedef void(^YGCExportFinished)(BOOL success, NSURL *outputURL);
        sidebarWidth:(CGFloat)width
    controlViewInset:(CGFloat)inset;
 
-- (void)exportVideo:(YGCExportFinished)finishedBlock;
+- ( AVAssetExportSession * _Nonnull )exportVideo:(YGCExportFinished)finishedBlock NS_SWIFT_NAME(exportVideo(completion:));
+- ( AVAssetExportSession * _Nonnull )exportVideoType: (AVFileType) videoType
+                   name:(NSString *)name  completion: (YGCExportFinished)finishedBlock NS_SWIFT_NAME(exportVideo(as:named:completion:));
 
 @end
