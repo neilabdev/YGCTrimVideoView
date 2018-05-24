@@ -23,6 +23,7 @@ static const CGFloat kDefaultControlBarWidth = 10;
 @property (nonatomic, strong) UIView *rightMaskView;
 
 @property (nonatomic, assign) CGFloat sidebarWidth;
+@property (nonatomic, assign) BOOL pendingInitialLayout;
 
 @end
 
@@ -60,6 +61,27 @@ static const CGFloat kDefaultControlBarWidth = 10;
     return self;
 }
 
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    [self layoutControlViews];
+}
+
+- (void) layoutControlViews {
+    NSLog(@"%@ : layoutControlViews",self );
+
+    if (self.pendingInitialLayout) {
+        self.leftControlBar.frame = CGRectMake(0, 0, self.sidebarWidth, self.ygc_height);
+        self.rightControlBar.frame = CGRectMake(self.ygc_width - kDefaultControlBarWidth, 0, kDefaultControlBarWidth, self.ygc_height);
+        self.pendingInitialLayout = false ;
+    }
+    //self.centerRangeView.frame = CGRectMake(self.leftControlBar.ygc_minX, 0, self.rightControlBar.ygc_maxX - self.leftControlBar.ygc_minX, self.ygc_height);
+    self.centerAlphaRangeView.frame = self.bounds;
+    self.centerRangeView.frame = CGRectMake(self.leftControlBar.ygc_minX, 0, self.rightControlBar.ygc_maxX - self.leftControlBar.ygc_minX, self.ygc_height);
+    self.leftMaskView.frame = CGRectMake(0, 0, self.leftControlBar.ygc_minX, self.ygc_height);
+    self.rightMaskView.frame = CGRectMake(self.rightControlBar.ygc_maxX, 0, self.ygc_width - self.rightControlBar.ygc_maxX, self.ygc_height);
+}
+
+
 #pragma mark - override hitTest
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
@@ -77,11 +99,12 @@ static const CGFloat kDefaultControlBarWidth = 10;
 #pragma mark - Common Init
 
 - (void)commonInit {
+    self.pendingInitialLayout = true;
     self.leftControlBar.frame = CGRectMake(0, 0, self.sidebarWidth, self.ygc_height);
     self.rightControlBar.frame = CGRectMake(self.ygc_width - kDefaultControlBarWidth, 0, kDefaultControlBarWidth, self.ygc_height);
     self.centerRangeView.frame = CGRectMake(self.leftControlBar.ygc_minX, 0, self.rightControlBar.ygc_maxX - self.leftControlBar.ygc_minX, self.ygc_height);
     self.centerAlphaRangeView.frame = self.bounds;
-
+    NSLog(@"%@ : commonInit",self );
     UIPanGestureRecognizer *leftControlPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleLeftControlGesture:)];
     [self.leftControlBar addGestureRecognizer:leftControlPan];
 
@@ -94,6 +117,8 @@ static const CGFloat kDefaultControlBarWidth = 10;
     [self addSubview:self.centerRangeView];
     [self addSubview:self.leftControlBar];
     [self addSubview:self.rightControlBar];
+    [self setNeedsLayout];
+    self.tag = 48;
 
 }
 
@@ -115,15 +140,12 @@ static const CGFloat kDefaultControlBarWidth = 10;
         }
 
         [self.leftControlBar ygc_setMinX:leftPositionX];
-        self.centerRangeView.frame = CGRectMake(self.leftControlBar.ygc_minX, 0, self.rightControlBar.ygc_maxX - self.leftControlBar.ygc_minX, self.ygc_height);
-        self.leftMaskView.frame = CGRectMake(0, 0, self.leftControlBar.ygc_minX, self.ygc_height);
-        self.rightMaskView.frame = CGRectMake(self.rightControlBar.ygc_maxX, 0, self.ygc_width - self.rightControlBar.ygc_maxX, self.ygc_height);
         [gesture setTranslation:CGPointZero inView:self];
-
+        [self setNeedsLayout];
         if ([self.delegate respondsToSelector:@selector(leftSideBarChangedFrame:rightBarCurrentFrame:)]) {
             [self.delegate leftSideBarChangedFrame:self.leftControlBar.frame rightBarCurrentFrame:self.rightControlBar.frame];
         }
-    }else if(gesture.state == UIGestureRecognizerStateEnded || gesture.state == UIGestureRecognizerStateCancelled) {
+    } else if(gesture.state == UIGestureRecognizerStateEnded || gesture.state == UIGestureRecognizerStateCancelled) {
         if ([self.delegate respondsToSelector:@selector(panGestureEnded:rightFrame:)]) {
             [self.delegate panGestureEnded:self.leftControlBar.frame rightFrame:self.rightControlBar.frame];
         }
@@ -146,9 +168,7 @@ static const CGFloat kDefaultControlBarWidth = 10;
         }
 
         [self.rightControlBar ygc_setMinX:rightPositionX];
-        self.centerRangeView.frame = CGRectMake(self.leftControlBar.ygc_minX, 0, self.rightControlBar.ygc_maxX - self.leftControlBar.ygc_minX, self.ygc_height);
-        self.leftMaskView.frame = CGRectMake(0, 0, self.leftControlBar.ygc_minX, self.ygc_height);
-        self.rightMaskView.frame = CGRectMake(self.rightControlBar.ygc_maxX, 0, self.ygc_width - self.rightControlBar.ygc_maxX, self.ygc_height);
+        [self setNeedsLayout];
         [gesture setTranslation:CGPointZero inView:self];
 
         if ([self.delegate respondsToSelector:@selector(rightSideBarChangedFrame:leftBarCurrentFrame:)]) {
@@ -166,6 +186,7 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIImageView *)leftControlBar {
     if (_leftControlBar == nil) {
         _leftControlBar = [[UIImageView alloc] init];
+        _leftControlBar.tag = 40;
     }
     return _leftControlBar;
 }
@@ -173,6 +194,7 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIImageView *)rightControlBar {
     if (_rightControlBar == nil) {
         _rightControlBar = [[UIImageView alloc] init];
+        _rightControlBar.tag = 50;
     }
     return _rightControlBar;
 }
@@ -180,6 +202,7 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIImageView *)centerRangeView {
     if (_centerRangeView == nil) {
         _centerRangeView = [[UIImageView alloc] init];
+        _centerRangeView.tag = 22;
     }
     return _centerRangeView;
 }
@@ -187,6 +210,7 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIImageView *)centerAlphaRangeView {
     if (_centerAlphaRangeView == nil) {
         _centerAlphaRangeView = [[UIImageView alloc] init];
+        _centerAlphaRangeView.tag = 88;
     }
     return _centerAlphaRangeView;
 }
@@ -194,6 +218,7 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIView *)leftMaskView {
     if (_leftMaskView == nil) {
         _leftMaskView = [[UIView alloc] init];
+        _leftMaskView.tag = 44;
     }
     return _leftMaskView;
 }
@@ -201,6 +226,7 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIView *)rightMaskView {
     if (_rightMaskView == nil) {
         _rightMaskView = [[UIView alloc] init];
+        _rightMaskView.tag = 64;
     }
     return _rightMaskView;
 }

@@ -112,6 +112,8 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     if (_controlView == nil) {
         _controlView = [[YGCTrimVideoControlView alloc] initWithFrame:CGRectInset(self.bounds, self.controlInset, 0) leftControlImage:self.leftSidebarImage rightControlImage:self.rightSidebarImage centerRangeImage:self.centerRangeImage sideBarWidth:self.sidebarWidth];
         _controlView.delegate = self;
+        _controlView.tag = 42;
+        _controlView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
     }
     return _controlView;
 }
@@ -123,6 +125,8 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
         _thumbCollectionView = [[UICollectionView alloc] initWithFrame:self.bounds collectionViewLayout:layout];
         _thumbCollectionView.delegate = self;
         _thumbCollectionView.dataSource = self;
+        _thumbCollectionView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+        _thumbCollectionView.tag = 77;
     }
     return _thumbCollectionView;
 }
