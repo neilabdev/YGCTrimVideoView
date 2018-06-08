@@ -10,7 +10,7 @@
 #import <AVFoundation/AVFoundation.h>
 
 typedef void(^YGCExportFinished)(BOOL success, NSURL *outputURL);
-
+typedef void(^YGCExportThumbnailFinished)(BOOL success, UIImage *image);
 @protocol YGCTrimVideoViewDelegate <NSObject>
 
 - (void)videoBeginTimeChanged:(CMTime)begin;
@@ -75,8 +75,23 @@ typedef void(^YGCExportFinished)(BOOL success, NSURL *outputURL);
        sidebarWidth:(CGFloat)width
    controlViewInset:(CGFloat)inset;
 
-- ( AVAssetExportSession * _Nonnull )exportVideo:(YGCExportFinished)finishedBlock NS_SWIFT_NAME(exportVideo(completion:));
-- ( AVAssetExportSession * _Nonnull )exportVideoType: (AVFileType) videoType
-                   name:(NSString *)name  completion: (YGCExportFinished)finishedBlock NS_SWIFT_NAME(exportVideo(as:named:completion:));
+- (AVAssetExportSession * _Nonnull )exportVideo:(YGCExportFinished)finishedBlock NS_SWIFT_NAME(exportVideo(completion:));
+- (AVAssetExportSession * _Nonnull )exportVideoType: (AVFileType) videoType
+                   name:(NSString *)name  completion: (YGCExportFinished)finishedBlock NS_SWIFT_NAME(exportVideo(as:name:completion:));
 
+- ( AVAssetExportSession * _Nonnull )exportVideoType: (AVFileType) videoType name:(NSString *)name
+                                                path:(NSString*)path completion: (YGCExportFinished)finishedBlock NS_SWIFT_NAME(exportVideo(as:name:path:completion:));
+
+
+-(void)previewVideoImageWithURL: (NSURL *) url maxSize:(CGSize) maxSize
+                     completion: (YGCExportThumbnailFinished)finishedBlock NS_SWIFT_NAME(previews(url:size:completion:));
+-(void)previewVideoImageWithURL: (NSURL *) url
+                     completion: (YGCExportThumbnailFinished)finishedBlock NS_SWIFT_NAME(previews(url:completion:));
+
+-(UIImage *)previewVideoImageWithURL: (NSURL *) url time: (CMTime) timeFrame  maxSize:(CGSize) maxSize
+                               error:(NSError * _Nullable * _Nullable)outError NS_SWIFT_NAME(preview(url:time:size:error:));
+
+-(UIImage *)previewVideoImageWithURL: (NSURL *) url  maxSize:(CGSize) maxSize
+                               error:(NSError * _Nullable * _Nullable)outError  NS_SWIFT_NAME(preview(url:size:error:));
+-(UIImage *)previewVideoImageWithURL: (NSURL *) url  maxSize:(CGSize) maxSize  NS_SWIFT_NAME(preview(url:size:));
 @end

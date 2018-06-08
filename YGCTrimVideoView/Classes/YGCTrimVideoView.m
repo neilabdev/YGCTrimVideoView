@@ -352,19 +352,89 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     return mutableComposition;
 }
 
+-(void)previewVideoImagesWithURL: (NSURL *) url maxSize:(CGSize) maxSize  completion: (YGCExportThumbnailFinished)finishedBlock {
+    AVURLAsset *asset = [[AVURLAsset alloc] initWithURL:url options:nil];
+    AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
+    generator.appliesPreferredTrackTransform = TRUE;
+    CMTime thumbTime = CMTimeMakeWithSeconds(0,30);
+
+    AVAssetImageGeneratorCompletionHandler handler = ^(CMTime requestedTime, CGImageRef im, CMTime actualTime, AVAssetImageGeneratorResult result, NSError *error){
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (error == nil && result == AVAssetImageGeneratorSucceeded) {
+                UIImage *thumbnailImage = [UIImage imageWithCGImage:im];
+                finishedBlock(true,thumbnailImage);
+            } else {
+                finishedBlock(false,nil);
+            }
+        });
+    };
+
+    if(!CGSizeEqualToSize(CGSizeZero, maxSize)) {
+        generator.maximumSize = maxSize;
+    }
+
+    [generator generateCGImagesAsynchronouslyForTimes:@[[NSValue valueWithCMTime:thumbTime]] completionHandler:handler];
+}
+
+-(void)previewVideoImagesWithURL: (NSURL *) url completion: (YGCExportThumbnailFinished)finishedBlock {
+    [self previewVideoImagesWithURL:url maxSize:CGSizeZero completion:finishedBlock];
+}
+
+
+-(UIImage *)previewVideoImageWithURL: (NSURL *) url time: (CMTime) timeFrame maxSize:(CGSize) maxSize
+                               error:(NSError * _Nullable * _Nullable)outError {
+    AVURLAsset *asset = [[AVURLAsset alloc] initWithURL:url options:nil];
+    AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
+    generator.appliesPreferredTrackTransform = TRUE;
+
+    if(!CGSizeEqualToSize(CGSizeZero, maxSize)) {
+        generator.maximumSize = maxSize;
+    }
+
+    CGImageRef imageRef = [generator copyCGImageAtTime:timeFrame actualTime:nil error:outError];
+    UIImage *image = imageRef ? [UIImage imageWithCGImage:imageRef] : nil;
+    return image ;
+}
+
+-(UIImage *)previewVideoImageWithURL: (NSURL *) url  maxSize:(CGSize) maxSize error:(NSError * _Nullable * _Nullable)outError {
+    return [self previewVideoImageWithURL:url time:CMTimeMakeWithSeconds(1,1) maxSize:maxSize error:outError];
+}
+
+-(UIImage *)previewVideoImageWithURL: (NSURL *) url  maxSize:(CGSize) maxSize {
+    NSError *outError;
+    UIImage *image = [self previewVideoImageWithURL:url time:CMTimeMakeWithSeconds(1,1) maxSize:maxSize error:&outError];
+    NSLog(@"previewVideoImageWithURL: error = %@",outError);
+    return image;
+}
+
 #pragma mark - Export
 
 
-
 - ( AVAssetExportSession * _Nonnull )exportVideoType: (AVFileType) videoType name:(NSString *)name  completion: (YGCExportFinished)finishedBlock {
+   return [self exportVideoType:videoType name:name path:nil completion:finishedBlock];
+}
+- ( AVAssetExportSession * _Nonnull )exportVideoType: (AVFileType) videoType name:(NSString *)name  path:(NSString*)path completion: (YGCExportFinished)finishedBlock {
     AVMutableComposition *asset = [self trimVideo];
-    NSString *tmpFile = [NSString stringWithFormat:@"%@_%@", [self pathForTemporaryFileWithPrefix:@"trim"], name];
-    if ([[NSFileManager defaultManager] fileExistsAtPath:tmpFile]) {
-        [[NSFileManager defaultManager] removeItemAtPath:tmpFile error:nil];
+    NSError* error;
+    NSString *dirPath = path ? path : NSTemporaryDirectory() ;
+    NSString *movFile = [dirPath stringByAppendingPathComponent: name ];
+
+    //if (![[NSFileManager defaultManager] fileExistsAtPath:dirPath isDirectory:true]) { }
+
+    if(![[NSFileManager defaultManager] createDirectoryAtPath:dirPath withIntermediateDirectories:YES attributes:nil error:&error]) {
+        if(finishedBlock)
+            finishedBlock(false,nil);
+        return nil;
     }
-    AVAssetExportSession *session = [[AVAssetExportSession alloc] initWithAsset:asset presetName:AVAssetExportPresetHighestQuality];
-    session.outputURL = [NSURL fileURLWithPath:tmpFile];
-    session.outputFileType =  videoType ;
+
+    if ([[NSFileManager defaultManager] fileExistsAtPath:movFile]) {
+        [[NSFileManager defaultManager] removeItemAtPath:movFile error:nil];
+    }
+
+    AVAssetExportSession *session =
+            [[AVAssetExportSession alloc] initWithAsset:asset presetName:AVAssetExportPresetHighestQuality];
+    session.outputURL = [NSURL fileURLWithPath:movFile];
+    session.outputFileType = videoType ;
 
     dispatch_async(dispatch_get_main_queue(), ^{
         if ([self.delegate respondsToSelector:@selector(videoExportStarted)]) {
@@ -376,7 +446,6 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
                                                        userInfo:@{@"session": session} repeats:YES];
 
     [session exportAsynchronouslyWithCompletionHandler:^{
-
         [progress invalidate];
 
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -385,8 +454,11 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
                 success = YES;
                 finishedBlock(YES, session.outputURL);
             } else {
+                NSError *error = session.error;
+                NSLog(@"error: %@", session.error);
                 finishedBlock(NO, nil);
             }
+
             if ([self.delegate respondsToSelector:@selector(videoExportFinished:url:)]) {
                 [self.delegate videoExportFinished:success url:session.outputURL];
             }
@@ -409,8 +481,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     }
 }
 
-- (NSString *)pathForTemporaryFileWithPrefix:(NSString *)prefix
-{
+- (NSString *) UUID  {
     NSString *  result;
     CFUUIDRef   uuid;
     CFStringRef uuidStr;
@@ -421,12 +492,17 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     uuidStr = CFUUIDCreateString(NULL, uuid);
     assert(uuidStr != NULL);
 
-    result = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%@-%@", prefix, uuidStr]];
-    assert(result != nil);
-
+    result = [NSString stringWithFormat:@"%@",uuidStr];
     CFRelease(uuidStr);
     CFRelease(uuid);
 
+    return result;
+}
+
+- (NSString *)pathForTemporaryFileWithSuffix:(NSString *)suffix
+{
+    NSString *  result  = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%@-%@",  [self UUID],suffix]];
+    assert(result != nil);
     return result;
 }
 @end
