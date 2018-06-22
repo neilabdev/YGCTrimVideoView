@@ -95,7 +95,10 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 }
 
 - (NSTimeInterval)pixelSeconds {
-    return [self acturalMaxSecons]/self.controlView.ygc_width;
+    CGFloat contentSizeWidth = self.thumbCollectionView.contentSize.width;
+    CGFloat minWidth = self.controlView.ygc_width;
+    CGFloat max_width = MAX(minWidth, contentSizeWidth);
+    return [self acturalMaxSecons]/max_width;
 }
 
 - (NSTimeInterval)cellTime {
@@ -276,17 +279,22 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     CGRect convertRightBarRect = [self.controlView convertRect:rightFrame toView:self];
     CGFloat leftPosition = self.thumbCollectionView.contentOffset.x + convertLeftBarRect.origin.x - self.controlInset;
     CGFloat rightPosition = self.thumbCollectionView.contentOffset.x + CGRectGetMaxX(convertRightBarRect) - self.controlInset;
-    CGFloat startSec = leftPosition * [self pixelSeconds];
-    CGFloat endSec = rightPosition * [self pixelSeconds];
+    NSTimeInterval pixelSeconds = [self pixelSeconds];
+    NSTimeInterval startSec = leftPosition * pixelSeconds;
+    NSTimeInterval endSec = rightPosition * pixelSeconds;
     _startTime = CMTimeMakeWithSeconds(startSec, self.asset.duration.timescale);
     _endTime = CMTimeMakeWithSeconds(endSec, self.asset.duration.timescale);
+
+    NSLog(@"pixelSeconds: %@ startSec: %@ endSec: %@  leftPosition: %@, rightPosition: %@",
+            @(pixelSeconds), @(startSec), @(endSec),@(leftPosition),@(rightPosition));
 }
 
 - (void)generateVideoThumb {
     CMTimeScale timeScale = self.asset.duration.timescale;
 
     self.controlView.mininumTimeWidth = self.minSeconds/[self pixelSeconds];
-    NSInteger thumbNumber = CMTimeGetSeconds(self.asset.duration)/[self cellTime];
+    CMTime assetDuraction = self.asset.duration;
+    NSInteger thumbNumber = CMTimeGetSeconds(assetDuraction)/[self cellTime];
 
     [self.timeArray removeAllObjects];
 
@@ -307,6 +315,8 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [self.thumbCollectionView reloadData];
                 });
+            } else {
+                NSLog(@"error generating video thumbnails: %@",error);
             }
         }];
     }
@@ -326,7 +336,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 
     // avoid user doesn't drag control bar
     if (CMTimeCompare(_startTime, kCMTimeZero) == 0 &&
-        CMTimeCompare(_startTime, kCMTimeZero) == 0)
+        CMTimeCompare(_startTime, kCMTimeZero) == 0) //FIXME: SHOULD THIS BE WRITTEN TWICE?
     {
         _endTime = CMTimeMakeWithSeconds([self acturalMaxSecons], self.asset.duration.timescale);
     }
