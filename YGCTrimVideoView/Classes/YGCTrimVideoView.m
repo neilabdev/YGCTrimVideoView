@@ -21,6 +21,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 {
     CMTime _startTime;
     CMTime _endTime;
+    CMTime _maxEndTime;
 }
 
 @property (nonatomic, strong) UICollectionView *thumbCollectionView;
@@ -71,6 +72,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
         self.timeArray = [NSMutableArray array];
         _maxSeconds = kDefaultMaxSeconds;
         _minSeconds = kDefaultMinSeconds;
+        _maxEndTime = [self maxEndTime];
         [self commonInit];
         [self generateVideoThumb];
     }
@@ -107,6 +109,10 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 
 - (CGFloat)cellWidth {
     return self.controlView.ygc_width/10;
+}
+
+- (CMTime) maxEndTime {
+    return CMTimeMakeWithSeconds([self acturalMaxSecons], self.asset.duration.timescale);
 }
 
 - (CGFloat)acturalMaxSecons {
@@ -334,9 +340,9 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
         assetAudioTrack = [asset tracksWithMediaType:AVMediaTypeAudio][0];
     }
 
-    // avoid user doesn't drag control bar
+    // avoid user doesn't drag control barz
     if (CMTimeCompare(_startTime, kCMTimeZero) == 0 &&
-        CMTimeCompare(_startTime, kCMTimeZero) == 0) //FIXME: SHOULD THIS BE WRITTEN TWICE?
+        CMTimeCompare(_endTime, kCMTimeZero) == 0) //FIXME: SHOULD THIS BE WRITTEN TWICE?
     {
         _endTime = CMTimeMakeWithSeconds([self acturalMaxSecons], self.asset.duration.timescale);
     }
