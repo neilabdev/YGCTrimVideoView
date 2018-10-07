@@ -118,8 +118,6 @@ static const CGFloat kDefaultControlBarWidth = 10;
     [self addSubview:self.leftControlBar];
     [self addSubview:self.rightControlBar];
     [self setNeedsLayout];
-    self.tag = 48;
-
 }
 
 #pragma mark - Gesture Handler
@@ -186,7 +184,6 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIImageView *)leftControlBar {
     if (_leftControlBar == nil) {
         _leftControlBar = [[UIImageView alloc] init];
-        _leftControlBar.tag = 40;
     }
     return _leftControlBar;
 }
@@ -194,7 +191,6 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIImageView *)rightControlBar {
     if (_rightControlBar == nil) {
         _rightControlBar = [[UIImageView alloc] init];
-        _rightControlBar.tag = 50;
     }
     return _rightControlBar;
 }
@@ -202,7 +198,6 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIImageView *)centerRangeView {
     if (_centerRangeView == nil) {
         _centerRangeView = [[UIImageView alloc] init];
-        _centerRangeView.tag = 22;
     }
     return _centerRangeView;
 }
@@ -210,7 +205,6 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIImageView *)centerAlphaRangeView {
     if (_centerAlphaRangeView == nil) {
         _centerAlphaRangeView = [[UIImageView alloc] init];
-        _centerAlphaRangeView.tag = 88;
     }
     return _centerAlphaRangeView;
 }
@@ -218,7 +212,6 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIView *)leftMaskView {
     if (_leftMaskView == nil) {
         _leftMaskView = [[UIView alloc] init];
-        _leftMaskView.tag = 44;
     }
     return _leftMaskView;
 }
@@ -226,7 +219,6 @@ static const CGFloat kDefaultControlBarWidth = 10;
 - (UIView *)rightMaskView {
     if (_rightMaskView == nil) {
         _rightMaskView = [[UIView alloc] init];
-        _rightMaskView.tag = 64;
     }
     return _rightMaskView;
 }
