@@ -67,7 +67,6 @@ static const CGFloat kDefaultControlBarWidth = 10;
 }
 
 - (void) layoutControlViews {
-    NSLog(@"%@ : layoutControlViews",self );
 
     if (self.pendingInitialLayout) {
         self.leftControlBar.frame = CGRectMake(0, 0, self.sidebarWidth, self.ygc_height);
@@ -104,7 +103,6 @@ static const CGFloat kDefaultControlBarWidth = 10;
     self.rightControlBar.frame = CGRectMake(self.ygc_width - kDefaultControlBarWidth, 0, kDefaultControlBarWidth, self.ygc_height);
     self.centerRangeView.frame = CGRectMake(self.leftControlBar.ygc_minX, 0, self.rightControlBar.ygc_maxX - self.leftControlBar.ygc_minX, self.ygc_height);
     self.centerAlphaRangeView.frame = self.bounds;
-    NSLog(@"%@ : commonInit",self );
     UIPanGestureRecognizer *leftControlPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleLeftControlGesture:)];
     [self.leftControlBar addGestureRecognizer:leftControlPan];
 
