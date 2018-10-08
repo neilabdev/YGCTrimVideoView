@@ -33,6 +33,8 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 @property (nonatomic, strong) NSMutableArray<NSValue *> *timeArray;
 @property (nonatomic, assign) CGFloat sidebarWidth;
 
+-  (CMTime) maxEndTimeStartingAt: (NSTimeInterval) startAt;
+-  (CMTime) maxEndTime;
 @end
 
 @implementation YGCTrimVideoView
@@ -70,7 +72,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
         _sidebarWidth = width;
         self.thumbImageArray = [NSMutableArray array];
         self.timeArray = [NSMutableArray array];
-        _maxSeconds = kDefaultMaxSeconds;
+        _maxSeconds =  kDefaultMaxSeconds;
         _minSeconds = kDefaultMinSeconds;
         _maxEndTime = [self maxEndTime];
         [self commonInit];
@@ -111,8 +113,20 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     return self.controlView.ygc_width/10;
 }
 
+- (CMTime) maxEndTimeStartingAt: (NSTimeInterval) startAt {
+    NSTimeInterval duration = CMTimeGetSeconds(self.asset.duration);
+    NSTimeInterval proposedEndTime = startAt + self.maxSeconds;
+
+    if(self.maxSeconds == 0 || proposedEndTime > duration) {
+        return self.asset.duration;
+    } else {
+        return  CMTimeMakeWithSeconds(proposedEndTime, self.asset.duration.timescale);
+    }
+}
+
 - (CMTime) maxEndTime {
-    return CMTimeMakeWithSeconds([self acturalMaxSecons], self.asset.duration.timescale);
+    NSTimeInterval duration = CMTimeGetSeconds(self.asset.duration);
+    return CMTimeMakeWithSeconds(duration, self.asset.duration.timescale);
 }
 
 - (CGFloat)acturalMaxSecons {
@@ -165,7 +179,6 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 
     if(minSeconds!= _minSeconds) {
         _minSeconds = minSeconds;
-        self.controlView.mininumTimeWidth = _minSeconds / [self pixelSeconds];
         [self setNeedsLayout];
     }
 }
@@ -241,32 +254,33 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 -(void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
 {
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
-    [self refreshVideoTime:[self.controlView leftBarFrame] rightFrmae:[self.controlView rightBarFrame]];
+    [self refreshVideoTime:[self.controlView leftBarFrame] rightFrame:[self.controlView rightBarFrame]];
     _currentAsset = [self trimVideo];
     if ([self.delegate respondsToSelector:@selector(dragActionEnded:)]) {
         [self.delegate dragActionEnded:self.currentAsset];
     }
+
 }
 
 #pragma mark - Trim ControlView Delegate
 
 - (void)leftSideBarChangedFrame:(CGRect)leftFrame rightBarCurrentFrame:(CGRect)rightFrame {
 
-    [self refreshVideoTime:leftFrame rightFrmae:rightFrame];
+    [self refreshVideoTime:leftFrame rightFrame:rightFrame];
     if ([self.delegate respondsToSelector:@selector(videoBeginTimeChanged:)]) {
         [self.delegate videoBeginTimeChanged:_startTime];
     }
 }
 
 - (void)rightSideBarChangedFrame:(CGRect)rightFrame leftBarCurrentFrame:(CGRect)leftFrame {
-    [self refreshVideoTime:leftFrame rightFrmae:rightFrame];
+    [self refreshVideoTime:leftFrame rightFrame:rightFrame];
     if ([self.delegate respondsToSelector:@selector(videoEndTimeChanged:)]) {
         [self.delegate videoEndTimeChanged:_endTime];
     }
 }
 
 - (void)panGestureEnded:(CGRect)leftFrame rightFrame:(CGRect)rightFrame {
-    [self refreshVideoTime:leftFrame rightFrmae:rightFrame];
+    [self refreshVideoTime:leftFrame rightFrame:rightFrame];
     _currentAsset = [self trimVideo];
     if ([self.delegate respondsToSelector:@selector(dragActionEnded:)]) {
         [self.delegate dragActionEnded:self.currentAsset];
@@ -275,7 +289,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 
 #pragma mark - Private Method
 
-- (void)refreshVideoTime:(CGRect)leftFrame rightFrmae:(CGRect)rightFrame {
+- (void)refreshVideoTime:(CGRect)leftFrame rightFrame:(CGRect)rightFrame {
     CGRect convertLeftBarRect = [self.controlView convertRect:leftFrame toView:self];
     CGRect convertRightBarRect = [self.controlView convertRect:rightFrame toView:self];
     CGFloat leftPosition = self.thumbCollectionView.contentOffset.x + convertLeftBarRect.origin.x - self.controlInset;
@@ -287,7 +301,7 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
 
     if(CGRectGetMaxX(convertRightBarRect) >= CGRectGetMaxX(self.controlView.frame)) {
         // right edge slider should  represent maxSeconds
-        _endTime = [self maxEndTime];
+        _endTime = [self maxEndTimeStartingAt:startSec];
     } else {
         _endTime =   CMTimeMakeWithSeconds(endSec, self.asset.duration.timescale);
     }
