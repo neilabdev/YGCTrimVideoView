@@ -122,7 +122,6 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     }else {
         return self.maxSeconds;
     }
-    
 }
 
 #pragma mark - Getter
@@ -285,10 +284,13 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     NSTimeInterval startSec = leftPosition * pixelSeconds;
     NSTimeInterval endSec = rightPosition * pixelSeconds;
     _startTime = CMTimeMakeWithSeconds(startSec, self.asset.duration.timescale);
-    _endTime = CMTimeMakeWithSeconds(endSec, self.asset.duration.timescale);
 
-    NSLog(@"pixelSeconds: %@ startSec: %@ endSec: %@  leftPosition: %@, rightPosition: %@",
-            @(pixelSeconds), @(startSec), @(endSec),@(leftPosition),@(rightPosition));
+    if(CGRectGetMaxX(convertRightBarRect) >= CGRectGetMaxX(self.controlView.frame)) {
+        // right edge slider should  represent maxSeconds
+        _endTime = [self maxEndTime];
+    } else {
+        _endTime =   CMTimeMakeWithSeconds(endSec, self.asset.duration.timescale);
+    }
 }
 
 - (void)generateVideoThumb {
@@ -340,6 +342,8 @@ static NSString * const kCellIdentifier = @"YGCThumbCollectionViewCell";
     if (CMTimeCompare(_startTime, kCMTimeZero) == 0 &&
         CMTimeCompare(_endTime, kCMTimeZero) == 0) //FIXME: SHOULD THIS BE WRITTEN TWICE?
     {
+        _endTime = CMTimeMakeWithSeconds([self acturalMaxSecons], self.asset.duration.timescale);
+    } else if(CMTimeCompare(_endTime, kCMTimeZero) == 0) {
         _endTime = CMTimeMakeWithSeconds([self acturalMaxSecons], self.asset.duration.timescale);
     }
     
